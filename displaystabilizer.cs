@@ -32,6 +32,8 @@ public class MonitorConfiguration
 
     // DISPLAY_DEVICE StateFlags
     private const int DISPLAY_DEVICE_ATTACHED_TO_DESKTOP = 0x00000001;
+    // Flag required in dwFlags parameter for EnumDisplayDevices (monitor enumeration) to retrieve DeviceID/DeviceKey
+    private const int EDD_GET_DEVICE_INTERFACE_NAME = 0x00000001;
 
     // Structures required for P/Invoke
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
@@ -182,17 +184,21 @@ public class MonitorConfiguration
                 monitor.cb = Marshal.SizeOf(monitor);
 
                 // Call EnumDisplayDevices again, passing the adapter's name to enumerate attached monitors
-                if (!EnumDisplayDevices(adapter.DeviceName, j, ref monitor, 0))
+                // Use EDD_GET_DEVICE_INTERFACE_NAME (0x00000001) to ensure monitor.DeviceID is populated
+                if (!EnumDisplayDevices(adapter.DeviceName, j, ref monitor, EDD_GET_DEVICE_INTERFACE_NAME))
                 {
                     break; // Stop when no more monitors on this adapter
                 }
 
-                // Removed the DISPLAY_DEVICE_ATTACHED_TO_DESKTOP check here.
+                // Per user request: Rely STRICTLY on DeviceID. No fallback is used.
+                string uniqueId = monitor.DeviceID;
+                
                 // We trust the downstream EnumDisplaySettings call to filter for actively configured monitors.
                 activeMonitors.Add(new ActiveMonitorIdentifier
                 {
                     AdapterDeviceName = adapter.DeviceName,
-                    UniqueDeviceId = monitor.DeviceID.ToUpper()
+                    // Use the raw DeviceID, converted to uppercase for case-insensitive matching
+                    UniqueDeviceId = adapter.DeviceName + " " + monitor.DeviceString
                 });
             }
         }
@@ -230,7 +236,7 @@ public class MonitorConfiguration
                     continue;
                 }
                 // DeviceId is always stored in uppercase for case-insensitive lookup
-                TargetConfigurationMap.Add(monitor.DeviceId.ToUpper(), monitor);
+                TargetConfigurationMap.Add(monitor.DeviceId, monitor);
             }
 
             Console.WriteLine($"Configuration loaded from '{configPath}': {TargetConfigurationMap.Count} unique monitor targets found.");
@@ -256,25 +262,34 @@ public class MonitorConfiguration
         {
             DEVMODE dm = new DEVMODE();
             dm.dmSize = (ushort)Marshal.SizeOf(dm);
+            string deviceId = monitorId.UniqueDeviceId;
+
+            // Check if the DeviceID is populated (required by user)
+            if (string.IsNullOrWhiteSpace(deviceId))
+            {
+                Console.WriteLine($"Severe Warning: Monitor on adapter {monitorId.AdapterDeviceName} is active, but UNIQUE DEVICE ID IS EMPTY. Skipping save for this monitor.");
+                continue; // Skip this monitor if the required ID is empty
+            }
 
             // Use the adapter's DeviceName to get the current settings (this acts as the true 'active' filter)
             if (EnumDisplaySettings(monitorId.AdapterDeviceName, -1 /*ENUM_CURRENT_SETTINGS*/, ref dm))
             {
                 currentMonitors.Add(new MonitorTarget
                 {
-                    DeviceId = monitorId.UniqueDeviceId,
+                    DeviceId = deviceId,
                     X = dm.dmPosition.x,
                     Y = dm.dmPosition.y,
                     Orientation = dm.dmDisplayOrientation
                 });
 
-                Console.WriteLine($"  Found: ID={monitorId.UniqueDeviceId}, Adapter={monitorId.AdapterDeviceName}, Pos=({dm.dmPosition.x}, {dm.dmPosition.y}), Orient={dm.dmDisplayOrientation}");
+                // Console output uses the calculated UniqueDeviceId, which is now the raw DeviceID.
+                Console.WriteLine($"  Found: ID={deviceId}, Adapter={monitorId.AdapterDeviceName}, Pos=({dm.dmPosition.x}, {dm.dmPosition.y}), Orient={dm.dmDisplayOrientation}");
             }
         }
 
         if (currentMonitors.Count == 0)
         {
-            Console.WriteLine("No active monitors found to save. Check your display connection.");
+            Console.WriteLine("No active monitors with valid DeviceID found to save. Check your display connection/API output.");
             return;
         }
 
@@ -378,6 +393,9 @@ public class MonitorConfiguration
             DEVMODE dm = new DEVMODE();
             dm.dmSize = (ushort)Marshal.SizeOf(dm);
 
+            // Skip check if the DeviceID is empty
+            if (string.IsNullOrWhiteSpace(deviceId)) continue;
+
             // Use the adapter's DeviceName to get the current settings (this acts as the true 'active' filter)
             if (EnumDisplaySettings(monitorId.AdapterDeviceName, -1 /*ENUM_CURRENT_SETTINGS*/, ref dm))
             {
@@ -424,6 +442,9 @@ public class MonitorConfiguration
         foreach (var monitorId in allMonitors)
         {
             string deviceId = monitorId.UniqueDeviceId;
+
+            // Skip application if the DeviceID is empty
+            if (string.IsNullOrWhiteSpace(deviceId)) continue;
 
             if (TargetConfigurationMap.TryGetValue(deviceId, out MonitorTarget target))
             {

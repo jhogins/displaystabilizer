@@ -33,7 +33,7 @@
                 // Arguments for saving the current setup to a file:
                 "--save_config",
                 "--config", 
-                "../my_current_setup.json" // This file will be created/overwritten
+                "../config.json" // This file will be created/overwritten
             ],
             "cwd": "${workspaceFolder}",
             "console": "externalTerminal",
