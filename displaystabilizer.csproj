@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- 
+      1. Target the Windows-specific framework (net7.0-windows) to gain access 
+         to Windows APIs, including P/Invoke functions and UI libraries.
+    -->
+    <TargetFramework>net7.0-windows</TargetFramework>
+    
+    <!-- 
+      2. Set the output type to Exe (which is typical for console apps).
+    -->
+    <OutputType>Exe</OutputType> 
+
+    <!-- 
+      3. This is the critical missing piece: Explicitly enable Windows Forms 
+         support for this project. This resolves the System.Windows.Forms reference.
+    -->
+    <UseWindowsForms>true</UseWindowsForms>
+
+    <!-- 
+      4. Optional, but recommended: Specify the runtime identifier for 
+         a self-contained Windows executable.
+    -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    
+  </PropertyGroup>
+
+</Project>

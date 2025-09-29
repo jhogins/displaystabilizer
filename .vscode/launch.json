@@ -1,0 +1,43 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Check/Apply Configuration",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            // NOTE: Replace 'net7.0' with your target framework if necessary (e.g., net8.0)
+            // The executable name is derived from your .csproj file name (displaystabilizer.csproj)
+            "program": "${workspaceFolder}/bin/Debug/net7.0-windows/win-x64/displaystabilizer.exe",
+            "args": [
+                // Arguments for running the tool:
+                // Replace 'config.json' with the path to your desired monitor setup file
+                "--config", 
+                "../config.json"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "externalTerminal", // Use externalTerminal so the Windows Forms message box works properly
+            "stopAtEntry": false
+        },
+        {
+            "name": "Save Current Config (--save_config)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            // NOTE: Replace 'net7.0' with your target framework if necessary (e.g., net8.0)
+            "program": "${workspaceFolder}/bin/Debug/net7.0-windows/win-x64/displaystabilizer.exe",
+            "args": [
+                // Arguments for saving the current setup to a file:
+                "--save_config",
+                "--config", 
+                "../my_current_setup.json" // This file will be created/overwritten
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "externalTerminal",
+            "stopAtEntry": false
+        }
+    ]
+}
